@@ -1,5 +1,7 @@
-package com.example.consistenthashing;
+package com.example.consistenthashing.data;
 
+import com.example.consistenthashing.node.ConsistentHashRing;
+import com.example.consistenthashing.node.Node;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;

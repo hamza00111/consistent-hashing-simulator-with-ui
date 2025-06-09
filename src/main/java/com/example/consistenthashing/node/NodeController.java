@@ -1,4 +1,4 @@
-package com.example.consistenthashing;
+package com.example.consistenthashing.node;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +24,7 @@ public class NodeController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> removeNode(@PathVariable String id) {
+    public ResponseEntity<?> removeNode(@PathVariable("id") String id) {
         ring.removeNode(id);
         return ResponseEntity.ok(Map.of("message", "Node removed", "id", id));
     }

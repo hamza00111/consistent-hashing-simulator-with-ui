@@ -1,4 +1,4 @@
-package com.example.consistenthashing;
+package com.example.consistenthashing.node;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

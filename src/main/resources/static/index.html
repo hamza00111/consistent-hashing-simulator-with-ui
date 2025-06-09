@@ -6,16 +6,180 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-sha256@0.9.0/src/sha256.min.js"></script>
     <style>
-        body              { font-family: Arial, sans-serif; margin: 1.5rem; }
-        h1                { margin-bottom: 0.5rem; }
-        h2                { margin-top: 1.5rem; }
-        input, button,
-        select            { margin: 0.25rem 0.4rem 0.25rem 0; padding: 0.3rem 0.6rem; }
-        pre               { background:#f7f7f7; padding:0.8rem; overflow-x:auto; font-size:0.9rem; }
-        .inline-form      { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
-        #viz              { border:1px solid #ddd; margin-top:1rem; }
-        .legend-item      { display:flex; align-items:center; gap:0.4rem; margin-right:0.8rem; font-size:0.9rem; }
-        .legend-swatch    { width:14px; height:14px; border-radius:3px; }
+        :root {
+            --primary-color: #4a6baf;
+            --primary-hover: #3a5a9f;
+            --primary-active: #2a4a8f;
+            --secondary-color: #f5f7fa;
+            --border-color: #d0d9e6;
+            --text-color: #333;
+            --success-color: #4caf50;
+            --radius: 6px;
+            --transition: all 0.2s ease-in-out;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 1.5rem;
+            color: var(--text-color);
+            line-height: 1.5;
+            background-color: #fafbfc;
+        }
+
+        h1 { 
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        h2 { 
+            margin-top: 1.5rem;
+            color: #2c3e50;
+        }
+
+        h3 {
+            color: #34495e;
+        }
+
+        /* Button and Input Styles */
+        input, select {
+            margin: 0.25rem 0.4rem 0.25rem 0;
+            padding: 0.5rem 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            background-color: white;
+            transition: var(--transition);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            min-width: 180px;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(74, 107, 175, 0.2);
+        }
+
+        /* Placeholder styling */
+        ::placeholder {
+            color: #adb5bd;
+            opacity: 1;
+        }
+
+        :-ms-input-placeholder {
+            color: #adb5bd;
+        }
+
+        ::-ms-input-placeholder {
+            color: #adb5bd;
+        }
+
+        button {
+            margin: 0.25rem 0.4rem 0.25rem 0;
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        button:active {
+            background-color: var(--primary-active);
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* Secondary button style */
+        button.secondary {
+            background-color: #f8f9fa;
+            color: #495057;
+            border: 1px solid #ced4da;
+        }
+
+        button.secondary:hover {
+            background-color: #e9ecef;
+            color: #212529;
+        }
+
+        button.secondary:active {
+            background-color: #dee2e6;
+        }
+
+        /* Refresh button style */
+        button.refresh {
+            background-color: #28a745;
+        }
+
+        button.refresh:hover {
+            background-color: #218838;
+        }
+
+        button.refresh:active {
+            background-color: #1e7e34;
+        }
+
+        pre {
+            background: var(--secondary-color);
+            padding: 1rem;
+            border-radius: var(--radius);
+            overflow-x: auto;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .inline-form {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        #viz {
+            border: 1px solid var(--border-color);
+            margin-top: 1rem;
+            border-radius: var(--radius);
+            background-color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-right: 0.8rem;
+            font-size: 0.9rem;
+            padding: 0.3rem 0.6rem;
+            background-color: var(--secondary-color);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .legend-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        section {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+        }
     </style>
 </head>
 <body>
@@ -30,7 +194,7 @@
 
     <div class="inline-form">
         <select id="removeNodeSelect"></select>
-        <button onclick="removeNode()">Remove Selected Node</button>
+        <button class="secondary" onclick="removeNode()">Remove Selected Node</button>
     </div>
 
     <h3>Current Nodes</h3>
@@ -46,7 +210,7 @@
 
     <div class="inline-form">
         <input id="lookupKey" placeholder="key">
-        <button onclick="locateKey()">Locate Key</button>
+        <button class="secondary" onclick="locateKey()">Locate Key</button>
     </div>
 
     <h3>Lookup Result</h3>
@@ -55,7 +219,7 @@
 
 <section>
     <h2>Ring Visualisation (with vNodes)</h2>
-    <button onclick="refreshAll()">Refresh Visualisation</button>
+    <button class="refresh" onclick="refreshAll()">Refresh Visualisation</button>
     <div id="legend" style="display:flex; flex-wrap:wrap; margin-top:0.8rem;"></div>
     <svg id="viz" width="720" height="720"></svg>
 </section>

@@ -1,4 +1,4 @@
-package com.example.consistenthashing;
+package com.example.consistenthashing.node;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

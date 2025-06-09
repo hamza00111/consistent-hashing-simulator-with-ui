@@ -1,4 +1,4 @@
-package com.example.consistenthashing;
+package com.example.consistenthashing.conf;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
