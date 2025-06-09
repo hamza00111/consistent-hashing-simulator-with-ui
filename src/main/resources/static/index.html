@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Consistent Hashing Simulator</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-sha256@0.9.0/src/sha256.min.js"></script>
+    <style>
+        body              { font-family: Arial, sans-serif; margin: 1.5rem; }
+        h1                { margin-bottom: 0.5rem; }
+        h2                { margin-top: 1.5rem; }
+        input, button,
+        select            { margin: 0.25rem 0.4rem 0.25rem 0; padding: 0.3rem 0.6rem; }
+        pre               { background:#f7f7f7; padding:0.8rem; overflow-x:auto; font-size:0.9rem; }
+        .inline-form      { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+        #viz              { border:1px solid #ddd; margin-top:1rem; }
+        .legend-item      { display:flex; align-items:center; gap:0.4rem; margin-right:0.8rem; font-size:0.9rem; }
+        .legend-swatch    { width:14px; height:14px; border-radius:3px; }
+    </style>
+</head>
+<body>
+<h1>Consistent Hashing Simulator</h1>
+
+<section>
+    <h2>Nodes</h2>
+    <div class="inline-form">
+        <input id="addNodeId" placeholder="node id">
+        <button onclick="addNode()">Add Node</button>
+    </div>
+
+    <div class="inline-form">
+        <select id="removeNodeSelect"></select>
+        <button onclick="removeNode()">Remove Selected Node</button>
+    </div>
+
+    <h3>Current Nodes</h3>
+    <pre id="nodesList"></pre>
+</section>
+
+<section>
+    <h2>Data Keys</h2>
+    <div class="inline-form">
+        <input id="dataKey" placeholder="key">
+        <button onclick="putKey()">Put Key</button>
+    </div>
+
+    <div class="inline-form">
+        <input id="lookupKey" placeholder="key">
+        <button onclick="locateKey()">Locate Key</button>
+    </div>
+
+    <h3>Lookup Result</h3>
+    <pre id="lookupResult"></pre>
+</section>
+
+<section>
+    <h2>Ring Visualisation (with vNodes)</h2>
+    <button onclick="refreshAll()">Refresh Visualisation</button>
+    <div id="legend" style="display:flex; flex-wrap:wrap; margin-top:0.8rem;"></div>
+    <svg id="viz" width="720" height="720"></svg>
+</section>
+
+<script>
+    /******************* REST HELPERS *****************/
+    const api = (p, o = {}) => fetch(p, o).then(r => r.json());
+
+    /******************* CONSTANTS *******************/
+    let VIRTUAL_NODES;                // loaded from backend config
+    const CENTER        = 360;
+    const RADIUS        = 300;
+    const COLOR         = d3.scaleOrdinal(d3.schemeTableau10);
+
+    // Load configuration from backend
+    let configLoaded = false;
+    api('/config').then(config => {
+        VIRTUAL_NODES = config.virtualNodes;
+        configLoaded = true;
+        console.log('Configuration loaded, virtualNodes:', VIRTUAL_NODES);
+        // Initialize the application
+        refreshAll();
+    });
+
+    /******************* HASH HELPERS *****************/
+    const MASK63 = (1n << 63n) - 1n;                // 0x7fff_ffff_ffff_ffff
+
+    /* Java-compatible 63-bit token */
+    const token63 = str => (BigInt('0x' + sha256(str).slice(0, 16)) & MASK63);
+
+    /* token → angle (radians)
+       shift right 10 bits (63-53) → safe double while preserving order */
+    function angleOf(tokenBig) {
+        const shifted = tokenBig >> 10n;            // drop 10 LSBs
+        const frac    = Number(shifted) / Math.pow(2, 53);
+        return 2 * Math.PI * frac;                  // 0 – 2π
+    }
+
+    const coord = (ang, r) => ({
+        x: CENTER + r * Math.cos(ang - Math.PI / 2),
+        y: CENTER + r * Math.sin(ang - Math.PI / 2)
+    });
+
+    /******************* DRAWING **********************/
+    function drawRing(nodes) {
+        const svg = d3.select('#viz')
+            .attr('width', CENTER * 2)
+            .attr('height', CENTER * 2);
+        svg.selectAll('*').remove();
+
+        svg.append('circle')
+            .attr('cx', CENTER).attr('cy', CENTER).attr('r', RADIUS)
+            .attr('fill', 'none').attr('stroke', '#888')
+            .attr('stroke-dasharray', '4 4');
+
+        /* legend reset */
+        const legend = document.getElementById('legend');
+        legend.innerHTML = '';
+
+        nodes.forEach(node => {
+            /* legend entry */
+            const li = document.createElement('div');
+            li.className = 'legend-item';
+            const sw = document.createElement('span');
+            sw.className = 'legend-swatch';
+            sw.style.background = COLOR(node.id);
+            li.appendChild(sw);
+            li.appendChild(document.createTextNode(node.id));
+            legend.appendChild(li);
+
+            /* vnodes */
+            for (let i = 0; i < VIRTUAL_NODES; i++) {
+                const ang       = angleOf(token63(node.id + '#' + i));
+                const {x, y}    = coord(ang, RADIUS);
+                const primary   = i === 0;
+
+                svg.append('circle')
+                    .attr('cx', x).attr('cy', y)
+                    .attr('r', primary ? 6 : 2.5)
+                    .attr('fill', COLOR(node.id))
+                    .attr('fill-opacity', primary ? 1 : 0.75)
+                    .attr('stroke', primary ? '#333' : 'none');
+
+                if (primary) {
+                    svg.append('text')
+                        .attr('x', x).attr('y', y - 10)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', '12px')
+                        .text(node.id);
+                }
+            }
+        });
+
+        /* data keys */
+        nodes.flatMap(n => n.keys.map(k => ({key: k, node: n.id})))
+            .forEach(d => {
+                const ang = angleOf(token63(d.key));
+                const pt  = coord(ang, RADIUS - 40);
+
+                svg.append('circle')
+                    .attr('cx', pt.x).attr('cy', pt.y)
+                    .attr('r', 4).attr('fill', COLOR(d.node));
+
+                svg.append('text')
+                    .attr('x', pt.x).attr('y', pt.y - 6)
+                    .attr('text-anchor', 'middle')
+                    .attr('font-size', '10px')
+                    .text(d.key);
+            });
+    }
+
+    /******************* UI OPERATIONS ****************/
+    function refreshNodes(visualOnly = false) {
+        return api('/nodes').then(data => {
+            if (!visualOnly) {
+                document.getElementById('nodesList').textContent =
+                    JSON.stringify(data, null, 2);
+
+                const sel = document.getElementById('removeNodeSelect');
+                sel.innerHTML = '';
+                data.forEach(n => {
+                    const o = document.createElement('option');
+                    o.value = o.textContent = n.id;
+                    sel.appendChild(o);
+                });
+            }
+            drawRing(data);
+            return data;
+        });
+    }
+    const refreshAll = () => {
+        if (!configLoaded) {
+            console.log('Configuration not yet loaded, waiting...');
+            return;
+        }
+        refreshNodes(true);
+    };
+
+    /* CRUD */
+    const addNode = () => {
+        const id = document.getElementById('addNodeId').value.trim();
+        if (id)
+            api('/nodes?id=' + encodeURIComponent(id), {method: 'POST'})
+                .then(() => refreshNodes());
+    };
+    const removeNode = () => {
+        const id = document.getElementById('removeNodeSelect').value;
+        if (id)
+            api('/nodes/' + encodeURIComponent(id), {method: 'DELETE'})
+                .then(() => refreshNodes());
+    };
+    const putKey = () => {
+        const key = document.getElementById('dataKey').value.trim();
+        if (key)
+            api('/data?key=' + encodeURIComponent(key), {method: 'POST'})
+                .then(d => {
+                    document.getElementById('lookupResult').textContent =
+                        JSON.stringify(d, null, 2);
+                    refreshNodes();
+                });
+    };
+    const locateKey = () => {
+        const key = document.getElementById('lookupKey').value.trim();
+        if (key)
+            api('/data/' + encodeURIComponent(key))
+                .then(d => {
+                    document.getElementById('lookupResult').textContent =
+                        JSON.stringify(d, null, 2);
+                });
+    };
+
+    /* initial render */
+    refreshNodes();
+</script>
+</body>
+</html>
