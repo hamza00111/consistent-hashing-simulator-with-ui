@@ -30,7 +30,7 @@ Consistent hashing solves this by:
 To improve distribution, this implementation uses virtual nodes:
 - Each physical server is represented by multiple virtual nodes on the ring
 - This helps achieve a more balanced distribution of keys
-- In this simulator, each physical node has 5 virtual nodes
+- Each node defaults to 5 virtual nodes (configurable via the `app.virtual-nodes` property in `application.properties`).
 
 ### Benefits
 
