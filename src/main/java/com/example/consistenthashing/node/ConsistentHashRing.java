@@ -62,14 +62,21 @@ public class ConsistentHashRing {
             if (!nodeMap.containsKey(nodeId)) {
                 return;
             }
-            List<String> keys = nodeMap.get(nodeId)
-                    .getKeys();
+            Node removedNode = nodeMap.get(nodeId);
+            List<String> keys = removedNode.getKeys();
             nodeMap.remove(nodeId);
             ring.values().removeIf(nodeId::equals);
+
+            if (ring.isEmpty()) {
+                keys.clear();
+                return;
+            }
+
             for (String key : keys) {
                 Node nodeForKey = getNodeForKey(key);
                 nodeForKey.getKeys().add(key);
             }
+            keys.clear();
         } finally {
             lock.writeLock().unlock();
         }
